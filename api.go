@@ -21,6 +21,10 @@ func (s* APIServer)  Serve(){
 	subrouter := router.PathPrefix("/api/v1").Subrouter()
 
 	//registering the routes
+
+	userService := NewUserService(s.store)
+	userService.RegisterRoutes(subrouter)
+	
 	tasksService := NewTasksService(s.store)
 	tasksService.RegisterRoutes(subrouter)
 	log.Fatal(http.ListenAndServe(s.addr, subrouter))
