@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var errEmailRequired = errors.New("email is required")
@@ -71,10 +72,46 @@ func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
-	// 1. Find user in db by email
-	// 2. Compare password with hashed password
-	// 3. Create JWT and set it in a cookie
-	// 4. Return JWT in response
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Error reading request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+	var payload *User
+	err = json.Unmarshal(body, &payload)
+	if err != nil {
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "Invalid request payload"})
+		return
+	}
+
+	if err := validateLoginUserPayload(payload); err != nil {
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	user, err := s.store.GetUserByEmail(payload.Email)
+	if err != nil {
+		if err.Error() == "user not found" {
+			WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "User not found"})
+		} else {
+			WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Error retrieving user"})
+		}
+		return
+	}
+
+	if !CheckPasswordHash(payload.Password, user.Password) {
+		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "Invalid email or password"})
+		return
+	}
+
+	token, err := createAndSetAuthCookie(user.ID, w)
+	if err != nil {
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Error logging in"})
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, token)
 }
 
 func validateUserPayload(user *User) error {
@@ -97,6 +134,18 @@ func validateUserPayload(user *User) error {
 	return nil
 }
 
+func validateLoginUserPayload(user *User) error {
+	if user.Email == "" {
+		return errEmailRequired
+	}
+
+	if user.Password == "" {
+		return errPasswordRequired
+	}
+
+	return nil
+}
+
 func createAndSetAuthCookie(userID int64, w http.ResponseWriter) (string, error) {
 	secret := []byte(Envs.JWTSecret)
 	token, err := CreateJWT(secret, userID)
@@ -110,4 +159,9 @@ func createAndSetAuthCookie(userID int64, w http.ResponseWriter) (string, error)
 	})
 
 	return token, nil
+}
+
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }

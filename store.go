@@ -1,23 +1,25 @@
 package main
 
-import "database/sql"
+import (
+	"database/sql"
+	"fmt"
+)
 
-type Store interface{
+type Store interface {
 	// Users
 	GetUserByID(id string) (*User, error)
+	GetUserByEmail(email string) (*User, error)
 	CreateUser(u *User) (*User, error)
 	//Tasks
 	CreateTask(t *Task) (*Task, error)
 	GetTask(id string) (*Task, error)
-
 }
 
-
-type Storage struct{
+type Storage struct {
 	db *sql.DB
 }
 
-func NewStore(db *sql.DB)  *Storage{
+func NewStore(db *sql.DB) *Storage {
 	return &Storage{
 		db: db,
 	}
@@ -38,22 +40,21 @@ func (s *Storage) CreateUser(u *User) (*User, error) {
 	return u, nil
 }
 
-
-func (s *Storage) CreateTask(t *Task) (*Task, error){
+func (s *Storage) CreateTask(t *Task) (*Task, error) {
 	rows, err := s.db.Exec("INSERT INTO tasks (name, status, project_id, assigned_to) VALUES (?, ?, ?, ?)", t.Name, t.Status, t.ProjectID, t.AssignedToID)
 
-   if err != nil{
-	return nil , err
-   }
+	if err != nil {
+		return nil, err
+	}
 
-   id, err := rows.LastInsertId()
+	id, err := rows.LastInsertId()
 
-   if err != nil{
-	return nil , err
-   }
+	if err != nil {
+		return nil, err
+	}
 
-   t.ID = id
-   return t, nil
+	t.ID = id
+	return t, nil
 }
 
 func (s *Storage) GetTask(id string) (*Task, error) {
@@ -66,4 +67,16 @@ func (s *Storage) GetUserByID(id string) (*User, error) {
 	var u User
 	err := s.db.QueryRow("SELECT id, email, firstName, lastName, createdAt FROM users WHERE id = ?", id).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt)
 	return &u, err
+}
+
+func (s *Storage) GetUserByEmail(email string) (*User, error) {
+	var u User
+	err := s.db.QueryRow("SELECT id, email, firstName, lastName, createdAt, password FROM users WHERE email = ?", email).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt, &u.Password)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return nil, fmt.Errorf("user not found")
+        }
+        return nil, err
+    }
+    return &u, nil
 }

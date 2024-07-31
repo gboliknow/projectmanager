@@ -26,3 +26,4 @@ func GetTokenFromRequest(r *http.Request) (string, error) {
 	}
 	return "", errTokenMissing
 }
+
