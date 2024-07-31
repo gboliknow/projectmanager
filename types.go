@@ -23,3 +23,27 @@ type User struct {
 	Password  string    `JSON:"password"`
 	CreatedAt time.Time `JSON:"createdAt"`
 }
+
+
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type RegisterPayload struct {
+	Email     string `json:"email"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Password  string `json:"password"`
+}
+
+type Project struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type CreateProjectPayload struct {
+	Name string `json:"name"`
+}
+

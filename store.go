@@ -13,6 +13,12 @@ type Store interface {
 	//Tasks
 	CreateTask(t *Task) (*Task, error)
 	GetTask(id string) (*Task, error)
+
+	//Projects
+	CreateProject(p *Project) error
+	GetProject(id string) (*Project, error)
+	DeleteProject(id string) error
+	GetProjectByName(name string) (bool, error)
 }
 
 type Storage struct {
@@ -72,11 +78,54 @@ func (s *Storage) GetUserByID(id string) (*User, error) {
 func (s *Storage) GetUserByEmail(email string) (*User, error) {
 	var u User
 	err := s.db.QueryRow("SELECT id, email, firstName, lastName, createdAt, password FROM users WHERE email = ?", email).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt, &u.Password)
-    if err != nil {
-        if err == sql.ErrNoRows {
-            return nil, fmt.Errorf("user not found")
-        }
-        return nil, err
-    }
-    return &u, nil
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, err
+	}
+	return &u, nil
+}
+
+func (s *Storage) CreateProject(p *Project) error {
+	result, err := s.db.Exec("INSERT INTO projects (name) VALUES (?)", p.Name)
+	if err != nil {
+		return err
+	}
+
+	id, err := result.LastInsertId()
+
+	if err != nil {
+		return err
+	}
+
+	p.ID = id
+	return nil
+}
+
+func (s *Storage) GetProject(id string) (*Project, error) {
+	var p Project
+	err := s.db.QueryRow("SELECT id, name, createdAt FROM projects WHERE id = ?", id).Scan(&p.ID, &p.Name, &p.CreatedAt)
+	return &p, err
+}
+
+func (s *Storage) DeleteProject(id string) error {
+	_, err := s.db.Exec("DELETE FROM projects WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Storage) GetProjectByName(name string) (bool, error) {
+	var p Project
+	err := s.db.QueryRow("SELECT id, name, createdAt FROM projects WHERE name = ?", name).Scan(&p.ID, &p.Name, &p.CreatedAt)
+	if err == sql.ErrNoRows {
+		return false, nil // No project found with the given name
+	}
+	if err != nil {
+		return false, err // Other errors (e.g., query issues)
+	}
+	return true, nil // Project found
 }
