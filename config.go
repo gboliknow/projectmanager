@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -17,13 +19,14 @@ type Config struct {
 var Envs = initConfig()
 
 func initConfig() Config {
+	godotenv.Load()
 	return Config{
-		Port:       getEnv("PORT", "55002"),
+		Port:       getEnv("PORT", "55006"),
 		DBUser:     getEnv("DB_USER", "user_1"),
 		DBPassword: getEnv("DB_PASSWORD", "password"),
 		DBName:     getEnv("DB_NAME", "projectmanager"),
-		JWTSecret:  getEnv("JWT_SECRET", "randomjwtsecretkey"),
-		DBAddress:  fmt.Sprintf("%s:%s", getEnv("DB_HOST", "127.0.0.1"), getEnv("DB_PORT", "55002")),
+		JWTSecret:  getEnv("JWT_SECRET", "c757b8c7cacc1d63b3d37a5688eaef1809687c1d3a4330192c7fbfe93a8dbeb5"),
+		DBAddress:  fmt.Sprintf("%s:%s", getEnv("DB_HOST", "127.0.0.1"), getEnv("DB_PORT", "55006")),
 	}
 }
 

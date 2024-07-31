@@ -14,43 +14,45 @@ import (
 
 func WithJWTAuth(handlerFunc http.HandlerFunc, store Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tokenString := GetTokenFromRequest(r)
+		tokenString , err := GetTokenFromRequest(r)
+		if err != nil{
+			errorHandler(w,"missing or invalid token")
+			return
+		}
 
 		token, err := validateJWT(tokenString)
 		if err != nil {
-			log.Printf("failed to authenticate token")
-			permissionDenied(w)
+			log.Printf("failed to authenticate token with err : %v", err)
+			errorHandler(w,"permission denied")
 			return
 		}
 
 		if !token.Valid {
-			log.Printf("failed to authenticate token")
-			permissionDenied(w)
+			log.Printf("failed to authenticate token because it invalid")
+			errorHandler(w,"permission denied")
 			return
 		}
 
-		claims :=  token.Claims.(jwt.MapClaims)
-		userID := claims["userID"].(string) 
+		claims := token.Claims.(jwt.MapClaims)
+		userID := claims["userID"].(string)
 
 		_, err = store.GetUserByID(userID)
 
-		if err != nil{
+		if err != nil {
 			log.Printf("failed to get user by id: %v", err)
-			permissionDenied(w)
+			errorHandler(w,"permission denied" )
 			return
 		}
-		handlerFunc(w,r)
+		handlerFunc(w, r)
 	}
 }
 
-func permissionDenied(w http.ResponseWriter) {
-	WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: fmt.Errorf("permission denied").Error()})
+func errorHandler(w http.ResponseWriter,errorString string) {
+	WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: fmt.Errorf(errorString).Error()})
 }
 
 func validateJWT(tokenString string) (*jwt.Token, error) {
-
 	secret := os.Getenv("JWT_SECRET")
-
 	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -59,7 +61,6 @@ func validateJWT(tokenString string) (*jwt.Token, error) {
 		return []byte(secret), nil
 	})
 }
-
 
 func CreateJWT(secret []byte, userID int64) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
