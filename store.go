@@ -19,6 +19,8 @@ type Store interface {
 	GetProject(id string) (*Project, error)
 	DeleteProject(id string) error
 	GetProjectByName(name string) (bool, error)
+	GetAllProjects() ([]*Project, error)
+	DeleteAllProjects() error
 }
 
 type Storage struct {
@@ -109,6 +111,28 @@ func (s *Storage) GetProject(id string) (*Project, error) {
 	return &p, err
 }
 
+func (s *Storage) GetAllProjects() ([]*Project, error) {
+	rows, err := s.db.Query("SELECT id, name, createdAt FROM projects")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var projects []*Project
+	for rows.Next() {
+		var p Project
+		if err := rows.Scan(&p.ID, &p.Name, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+		projects = append(projects, &p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return projects, nil
+}
+
 func (s *Storage) DeleteProject(id string) error {
 	_, err := s.db.Exec("DELETE FROM projects WHERE id = ?", id)
 	if err != nil {
@@ -116,6 +140,11 @@ func (s *Storage) DeleteProject(id string) error {
 	}
 
 	return nil
+}
+
+func (s *Storage) DeleteAllProjects() error {
+	_, err := s.db.Exec("DELETE FROM projects")
+	return err
 }
 
 func (s *Storage) GetProjectByName(name string) (bool, error) {
