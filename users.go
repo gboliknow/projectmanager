@@ -40,35 +40,35 @@ func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request)
 	var payload *User
 	err = json.Unmarshal(body, &payload)
 	if err != nil {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "Invalid request payload"})
+		WriteJSON(w, http.StatusBadRequest,"Invalid request payload", nil)
 		return
 	}
 
 	if err := validateUserPayload(payload); err != nil {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	hashedPassword, err := HashPassword(payload.Password)
 	if err != nil {
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Error creating user"})
+		WriteJSON(w, http.StatusInternalServerError,  "Error creating user", nil)
 		return
 	}
 	payload.Password = hashedPassword
 
 	u, err := s.store.CreateUser(payload)
 	if err != nil {
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Error creating user"})
+		WriteJSON(w, http.StatusInternalServerError, "Error creating user", nil)
 		return
 	}
 
 	token, err := createAndSetAuthCookie(u.ID, w)
 	if err != nil {
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Error creating user"})
+		WriteJSON(w, http.StatusInternalServerError, "Error creating user", nil)
 		return
 	}
 
-	WriteJSON(w, http.StatusCreated, token)
+	WriteJSON(w, http.StatusCreated,"Successful", token)
 }
 
 func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
@@ -81,37 +81,39 @@ func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var payload *User
 	err = json.Unmarshal(body, &payload)
 	if err != nil {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "Invalid request payload"})
+		WriteJSON(w, http.StatusBadRequest,  "Invalid request payload", nil)
 		return
 	}
 
 	if err := validateLoginUserPayload(payload); err != nil {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusBadRequest,  err.Error(), nil)
+		
 		return
 	}
 
 	user, err := s.store.GetUserByEmail(payload.Email)
 	if err != nil {
 		if err.Error() == "user not found" {
-			WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "User not found"})
+			WriteJSON(w, http.StatusUnauthorized,  "User not found", nil)
+			
 		} else {
-			WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Error retrieving user"})
+			WriteJSON(w, http.StatusInternalServerError,"Error retrieving user", nil)
 		}
 		return
 	}
 
 	if !CheckPasswordHash(payload.Password, user.Password) {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "Invalid email or password"})
+		WriteJSON(w, http.StatusUnauthorized, "Invalid email or password", nil)
 		return
 	}
 
 	token, err := createAndSetAuthCookie(user.ID, w)
 	if err != nil {
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Error logging in"})
+		WriteJSON(w, http.StatusInternalServerError, "Error logging in", nil)
 		return
 	}
 
-	WriteJSON(w, http.StatusOK, token)
+	WriteJSON(w, http.StatusOK,"Successful", token)
 }
 
 func validateUserPayload(user *User) error {

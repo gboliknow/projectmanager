@@ -47,3 +47,8 @@ type CreateProjectPayload struct {
 	Name string `json:"name"`
 }
 
+type Response struct {
+    StatusCode int         `json:"statusCode"`
+    Message    string      `json:"message"`
+    Data       interface{} `json:"data,omitempty"` // Data is omitted if nil or empty
+}

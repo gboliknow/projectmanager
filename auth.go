@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
+
 )
 
 func WithJWTAuth(handlerFunc http.HandlerFunc, store Store) http.HandlerFunc {
@@ -48,7 +49,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store Store) http.HandlerFunc {
 }
 
 func errorHandler(w http.ResponseWriter, errorString string) {
-	WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: fmt.Errorf(errorString).Error()})
+	WriteJSON(w, http.StatusUnauthorized, errorString, nil)
 }
 
 func validateJWT(tokenString string) (*jwt.Token, error) {

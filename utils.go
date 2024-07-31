@@ -7,10 +7,18 @@ import (
 	"strings"
 )
 
-func WriteJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+
+func WriteJSON(w http.ResponseWriter, statusCode int, message string, data interface{}) {
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(statusCode)
+    response := Response{
+        StatusCode: statusCode,
+        Message:    message,
+        Data:       data,
+    }
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        http.Error(w, "Error encoding response", http.StatusInternalServerError)
+    }
 }
 
 func GetTokenFromRequest(r *http.Request) (string, error) {
