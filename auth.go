@@ -14,22 +14,22 @@ import (
 
 func WithJWTAuth(handlerFunc http.HandlerFunc, store Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tokenString , err := GetTokenFromRequest(r)
-		if err != nil{
-			errorHandler(w,"missing or invalid token")
+		tokenString, err := GetTokenFromRequest(r)
+		if err != nil {
+			errorHandler(w, "missing or invalid token")
 			return
 		}
 
 		token, err := validateJWT(tokenString)
 		if err != nil {
 			log.Printf("failed to authenticate token with err : %v", err)
-			errorHandler(w,"permission denied")
+			errorHandler(w, "permission denied")
 			return
 		}
 
 		if !token.Valid {
 			log.Printf("failed to authenticate token because it invalid")
-			errorHandler(w,"permission denied")
+			errorHandler(w, "permission denied")
 			return
 		}
 
@@ -40,14 +40,14 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store Store) http.HandlerFunc {
 
 		if err != nil {
 			log.Printf("failed to get user by id: %v", err)
-			errorHandler(w,"permission denied" )
+			errorHandler(w, "permission denied")
 			return
 		}
 		handlerFunc(w, r)
 	}
 }
 
-func errorHandler(w http.ResponseWriter,errorString string) {
+func errorHandler(w http.ResponseWriter, errorString string) {
 	WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: fmt.Errorf(errorString).Error()})
 }
 
