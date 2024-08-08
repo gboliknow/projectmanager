@@ -1,6 +1,7 @@
-package main
+package api
 
 import (
+	"REST_API_WITH_GO/internal/utility"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,12 +11,11 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
-
 )
 
 func WithJWTAuth(handlerFunc http.HandlerFunc, store Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tokenString, err := GetTokenFromRequest(r)
+		tokenString, err :=  utility. GetTokenFromRequest(r)
 		if err != nil {
 			errorHandler(w, "missing or invalid token")
 			return
@@ -49,7 +49,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store Store) http.HandlerFunc {
 }
 
 func errorHandler(w http.ResponseWriter, errorString string) {
-	WriteJSON(w, http.StatusUnauthorized, errorString, nil)
+	utility.WriteJSON(w, http.StatusUnauthorized, errorString, nil)
 }
 
 func validateJWT(tokenString string) (*jwt.Token, error) {

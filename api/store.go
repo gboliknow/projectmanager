@@ -1,25 +1,26 @@
-package main
+package api
 
 import (
+	"REST_API_WITH_GO/internal/types"
 	"database/sql"
 	"fmt"
 )
 
 type Store interface {
 	// Users
-	GetUserByID(id string) (*User, error)
-	GetUserByEmail(email string) (*User, error)
-	CreateUser(u *User) (*User, error)
+	GetUserByID(id string) (*types.User, error)
+	GetUserByEmail(email string) (*types.User, error)
+	CreateUser(u *types.User) (*types.User, error)
 	//Tasks
-	CreateTask(t *Task) (*Task, error)
-	GetTask(id string) (*Task, error)
+	CreateTask(t *types.Task) (*types.Task, error)
+	GetTask(id string) (*types.Task, error)
 
 	//Projects
-	CreateProject(p *Project) error
-	GetProject(id string) (*Project, error)
+	CreateProject(p *types.Project) error
+	GetProject(id string) (*types.Project, error)
 	DeleteProject(id string) error
 	GetProjectByName(name string) (bool, error)
-	GetAllProjects() ([]*Project, error)
+	GetAllProjects() ([]*types.Project, error)
 	DeleteAllProjects() error
 }
 
@@ -33,7 +34,7 @@ func NewStore(db *sql.DB) *Storage {
 	}
 }
 
-func (s *Storage) CreateUser(u *User) (*User, error) {
+func (s *Storage) CreateUser(u *types.User) (*types.User, error) {
 	rows, err := s.db.Exec("INSERT INTO users (email, firstName, lastName, password) VALUES (?, ?, ?, ?)", u.Email, u.FirstName, u.LastName, u.Password)
 	if err != nil {
 		return nil, err
@@ -48,7 +49,7 @@ func (s *Storage) CreateUser(u *User) (*User, error) {
 	return u, nil
 }
 
-func (s *Storage) CreateTask(t *Task) (*Task, error) {
+func (s *Storage) CreateTask(t *types.Task) (*types.Task, error) {
 	rows, err := s.db.Exec("INSERT INTO tasks (name, status, project_id, assigned_to) VALUES (?, ?, ?, ?)", t.Name, t.Status, t.ProjectID, t.AssignedToID)
 
 	if err != nil {
@@ -65,20 +66,20 @@ func (s *Storage) CreateTask(t *Task) (*Task, error) {
 	return t, nil
 }
 
-func (s *Storage) GetTask(id string) (*Task, error) {
-	var t Task
+func (s *Storage) GetTask(id string) (*types.Task, error) {
+	var t types.Task
 	err := s.db.QueryRow("SELECT id, name, status, project_id, assigned_to, createdAt FROM tasks WHERE id = ?", id).Scan(&t.ID, &t.Name, &t.Status, &t.ProjectID, &t.AssignedToID, &t.CreatedAt)
 	return &t, err
 }
 
-func (s *Storage) GetUserByID(id string) (*User, error) {
-	var u User
+func (s *Storage) GetUserByID(id string) (*types.User, error) {
+	var u types.User
 	err := s.db.QueryRow("SELECT id, email, firstName, lastName, createdAt FROM users WHERE id = ?", id).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt)
 	return &u, err
 }
 
-func (s *Storage) GetUserByEmail(email string) (*User, error) {
-	var u User
+func (s *Storage) GetUserByEmail(email string) (*types.User, error) {
+	var u types.User
 	err := s.db.QueryRow("SELECT id, email, firstName, lastName, createdAt, password FROM users WHERE email = ?", email).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt, &u.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -89,7 +90,7 @@ func (s *Storage) GetUserByEmail(email string) (*User, error) {
 	return &u, nil
 }
 
-func (s *Storage) CreateProject(p *Project) error {
+func (s *Storage) CreateProject(p *types.Project) error {
 	result, err := s.db.Exec("INSERT INTO projects (name) VALUES (?)", p.Name)
 	if err != nil {
 		return err
@@ -105,22 +106,22 @@ func (s *Storage) CreateProject(p *Project) error {
 	return nil
 }
 
-func (s *Storage) GetProject(id string) (*Project, error) {
-	var p Project
+func (s *Storage) GetProject(id string) (*types.Project, error) {
+	var p types.Project
 	err := s.db.QueryRow("SELECT id, name, createdAt FROM projects WHERE id = ?", id).Scan(&p.ID, &p.Name, &p.CreatedAt)
 	return &p, err
 }
 
-func (s *Storage) GetAllProjects() ([]*Project, error) {
+func (s *Storage) GetAllProjects() ([]*types.Project, error) {
 	rows, err := s.db.Query("SELECT id, name, createdAt FROM projects")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var projects []*Project
+	var projects []*types.Project
 	for rows.Next() {
-		var p Project
+		var p types.Project
 		if err := rows.Scan(&p.ID, &p.Name, &p.CreatedAt); err != nil {
 			return nil, err
 		}
@@ -148,7 +149,7 @@ func (s *Storage) DeleteAllProjects() error {
 }
 
 func (s *Storage) GetProjectByName(name string) (bool, error) {
-	var p Project
+	var p types.Project
 	err := s.db.QueryRow("SELECT id, name, createdAt FROM projects WHERE name = ?", name).Scan(&p.ID, &p.Name, &p.CreatedAt)
 	if err == sql.ErrNoRows {
 		return false, nil // No project found with the given name

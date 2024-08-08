@@ -1,6 +1,7 @@
-package main
+package test
 
 import (
+	"REST_API_WITH_GO/api"
 	"testing"
 )
 
@@ -9,7 +10,7 @@ func TestCreateJWT(t *testing.T) {
 	userID := int64(50)
 
 	t.Run("should create a valid JWT", func(t *testing.T) {
-		tokenString, err := CreateJWT(secret, userID)
+		tokenString, err := api.CreateJWT(secret, userID)
 
 		if err != nil {
 			t.Fatalf("expected no error , got %v", err)
@@ -21,15 +22,14 @@ func TestCreateJWT(t *testing.T) {
 	})
 }
 
+func TestHashPassword(t *testing.T) {
+	hash, err := api.HashPassword("password")
 
-func TestHashPassword(t *testing.T){
-	hash, err := HashPassword("password")
-
-	if err != nil{
+	if err != nil {
 		t.Errorf("error hashing password: %v", err)
 	}
 
-	if len(hash) == 0{
+	if len(hash) == 0 {
 		t.Errorf("expected hash to no be empty")
 	}
 

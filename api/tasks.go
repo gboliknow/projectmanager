@@ -1,6 +1,8 @@
-package main
+package api
 
 import (
+	"REST_API_WITH_GO/internal/types"
+	"REST_API_WITH_GO/internal/utility"
 	"encoding/json"
 	"errors"
 	"io"
@@ -37,26 +39,26 @@ func (s *TasksService) handleCreateTask(w http.ResponseWriter, r *http.Request) 
 
 	defer r.Body.Close()
 
-	var task *Task
+	var task *types.Task
 
 	err = json.Unmarshal(body, &task)
 
 	if err != nil {
-		WriteJSON(w, http.StatusBadRequest, "Invalid request payload!", nil)
+utility		.WriteJSON(w, http.StatusBadRequest, "Invalid request payload!", nil)
 		return
 	}
 
 	if err := validateTaskPayload(task); err != nil {
-		WriteJSON(w, http.StatusBadRequest, err.Error(), nil)
+		utility.WriteJSON(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 	t, err := s.store.CreateTask(task)
 	if err != nil {
-		WriteJSON(w, http.StatusBadRequest, err.Error(), nil)
+		utility.WriteJSON(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	WriteJSON(w, http.StatusCreated, "Ok", t)
+	utility.WriteJSON(w, http.StatusCreated, "Ok", t)
 
 }
 
@@ -73,15 +75,15 @@ func (s *TasksService) handleGetTask(w http.ResponseWriter, r *http.Request) {
 	t, err := s.store.GetTask(id)
 
 	if err != nil {
-		WriteJSON(w, http.StatusInternalServerError, "task not found", nil)
+		utility.WriteJSON(w, http.StatusInternalServerError, "task not found", nil)
 		return
 	}
 
-	WriteJSON(w, http.StatusOK, "Ok", t)
+	utility.WriteJSON(w, http.StatusOK, "Ok", t)
 
 }
 
-func validateTaskPayload(task *Task) error {
+func validateTaskPayload(task *types.Task) error {
 	if task.Name == "" {
 		return errNameRequired
 	}

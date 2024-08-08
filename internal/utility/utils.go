@@ -1,24 +1,24 @@
-package main
+package utility
 
 import (
+	"REST_API_WITH_GO/internal/types"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
 )
 
-
 func WriteJSON(w http.ResponseWriter, statusCode int, message string, data interface{}) {
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(statusCode)
-    response := Response{
-        StatusCode: statusCode,
-        Message:    message,
-        Data:       data,
-    }
-    if err := json.NewEncoder(w).Encode(response); err != nil {
-        http.Error(w, "Error encoding response", http.StatusInternalServerError)
-    }
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	response :=  types.Response{
+		StatusCode: statusCode,
+		Message:    message,
+		Data:       data,
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+	}
 }
 
 func GetTokenFromRequest(r *http.Request) (string, error) {
@@ -34,4 +34,3 @@ func GetTokenFromRequest(r *http.Request) (string, error) {
 	}
 	return "", errTokenMissing
 }
-
