@@ -19,7 +19,13 @@ type Config struct {
 var Envs = initConfig()
 
 func initConfig() Config {
-	godotenv.Load()
+
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Error loading .env file")
+		fmt.Println("Error:", err)
+	}
+
 	return Config{
 		Port:       getEnv("PORT", "55000"),
 		DBUser:     getEnv("DB_USER", "user_1"),

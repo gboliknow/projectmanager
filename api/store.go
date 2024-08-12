@@ -50,7 +50,11 @@ func (s *Storage) CreateUser(u *types.User) (*types.User, error) {
 }
 
 func (s *Storage) CreateTask(t *types.Task) (*types.Task, error) {
-	rows, err := s.db.Exec("INSERT INTO tasks (name, status, project_id, assigned_to) VALUES (?, ?, ?, ?)", t.Name, t.Status, t.ProjectID, t.AssignedToID)
+
+	if t.Status == "" {
+		t.Status = "TODO" // default value
+	}
+	rows, err := s.db.Exec("INSERT INTO tasks (name, status, projectId, AssignedToID) VALUES (?, ?, ?, ?)", t.Name, t.Status, t.ProjectID, t.AssignedToID)
 
 	if err != nil {
 		return nil, err
@@ -68,7 +72,7 @@ func (s *Storage) CreateTask(t *types.Task) (*types.Task, error) {
 
 func (s *Storage) GetTask(id string) (*types.Task, error) {
 	var t types.Task
-	err := s.db.QueryRow("SELECT id, name, status, project_id, assigned_to, createdAt FROM tasks WHERE id = ?", id).Scan(&t.ID, &t.Name, &t.Status, &t.ProjectID, &t.AssignedToID, &t.CreatedAt)
+	err := s.db.QueryRow("SELECT id, name, status, projectId, AssignedToID, createdAt FROM tasks WHERE id = ?", id).Scan(&t.ID, &t.Name, &t.Status, &t.ProjectID, &t.AssignedToID, &t.CreatedAt)
 	return &t, err
 }
 

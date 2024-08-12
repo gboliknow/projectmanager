@@ -116,7 +116,20 @@ func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utility.WriteJSON(w, http.StatusOK, "Successful", token)
+	responseData := struct {
+		Token string              `json:"token"`
+		User  *types.UserResponse `json:"user"`
+	}{
+		Token: token,
+		User: &types.UserResponse{
+			ID:        user.ID,
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+			Email:     user.Email,
+			CreatedAt: user.CreatedAt,
+		},
+	}
+	utility.WriteJSON(w, http.StatusOK, "Successful", responseData)
 }
 
 func validateUserPayload(user *types.User) error {

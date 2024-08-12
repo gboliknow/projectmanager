@@ -11,7 +11,7 @@ type Task struct {
 	Name         string    `JSON:"name"`
 	Status       string    `JSON:"status"`
 	ProjectID    int64     `JSON:"projectID"`
-	AssignedToID int64     `JSON:"assignedTo"`
+	AssignedToID int64     `JSON:"AssignedToID"`
 	CreatedAt    time.Time `JSON:"createdAt"`
 }
 
@@ -23,7 +23,6 @@ type User struct {
 	Password  string    `JSON:"password"`
 	CreatedAt time.Time `JSON:"createdAt"`
 }
-
 
 type LoginRequest struct {
 	Email    string `json:"email"`
@@ -48,7 +47,15 @@ type CreateProjectPayload struct {
 }
 
 type Response struct {
-    StatusCode int         `json:"statusCode"`
-    Message    string      `json:"message"`
-    Data       interface{} `json:"data,omitempty"` // Data is omitted if nil or empty
+	StatusCode int         `json:"statusCode"`
+	Message    string      `json:"message"`
+	Data       interface{} `json:"data,omitempty"` // Data is omitted if nil or empty
+}
+
+type UserResponse struct {
+	ID        int64     `json:"ID"`
+	FirstName string    `json:"FirstName"`
+	LastName  string    `json:"LastName"`
+	Email     string    `json:"Email"`
+	CreatedAt time.Time `json:"CreatedAt"`
 }
