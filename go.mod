@@ -1,4 +1,4 @@
-module REST_API_WITH_GO
+module projectmanager
 
 go 1.22.5
 

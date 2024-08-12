@@ -1,7 +1,7 @@
 package test
 
 import (
-	"REST_API_WITH_GO/api"
+	"projectmanager/api"
 	"testing"
 )
 

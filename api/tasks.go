@@ -1,12 +1,12 @@
 package api
 
 import (
-	"REST_API_WITH_GO/internal/types"
-	"REST_API_WITH_GO/internal/utility"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
+	"projectmanager/internal/types"
+	"projectmanager/internal/utility"
 
 	"github.com/gorilla/mux"
 )
@@ -44,7 +44,7 @@ func (s *TasksService) handleCreateTask(w http.ResponseWriter, r *http.Request) 
 	err = json.Unmarshal(body, &task)
 
 	if err != nil {
-utility		.WriteJSON(w, http.StatusBadRequest, "Invalid request payload!", nil)
+		utility.WriteJSON(w, http.StatusBadRequest, "Invalid request payload!", nil)
 		return
 	}
 

@@ -1,13 +1,13 @@
 package api
 
 import (
-	"REST_API_WITH_GO/internal/config"
-	"REST_API_WITH_GO/internal/types"
-	"REST_API_WITH_GO/internal/utility"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
+	"projectmanager/internal/config"
+	"projectmanager/internal/types"
+	"projectmanager/internal/utility"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"

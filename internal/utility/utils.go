@@ -1,17 +1,17 @@
 package utility
 
 import (
-	"REST_API_WITH_GO/internal/types"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"projectmanager/internal/types"
 	"strings"
 )
 
 func WriteJSON(w http.ResponseWriter, statusCode int, message string, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	response :=  types.Response{
+	response := types.Response{
 		StatusCode: statusCode,
 		Message:    message,
 		Data:       data,

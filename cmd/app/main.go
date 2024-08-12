@@ -1,10 +1,10 @@
 package main
 
 import (
-	"REST_API_WITH_GO/api"
-	"REST_API_WITH_GO/internal/config"
-	"REST_API_WITH_GO/internal/database"
 	"log"
+	"projectmanager/api"
+	"projectmanager/internal/config"
+	"projectmanager/internal/database"
 
 	"github.com/go-sql-driver/mysql"
 )

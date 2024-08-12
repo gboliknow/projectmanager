@@ -1,11 +1,11 @@
 package api
 
 import (
-	"REST_API_WITH_GO/internal/types"
-	"REST_API_WITH_GO/internal/utility"
 	"encoding/json"
 	"io"
 	"net/http"
+	"projectmanager/internal/types"
+	"projectmanager/internal/utility"
 
 	"github.com/gorilla/mux"
 )
@@ -34,7 +34,7 @@ func (s *ProjectService) handleCreateProject(w http.ResponseWriter, r *http.Requ
 	}
 
 	defer r.Body.Close()
-	var project  *types.Project
+	var project *types.Project
 	err = json.Unmarshal(body, &project)
 
 	if err != nil {
@@ -110,5 +110,5 @@ func (s *ProjectService) handleDeleteAllProjects(w http.ResponseWriter, r *http.
 		return
 	}
 
-	 utility. WriteJSON(w, http.StatusOK, "All projects deleted successfully", nil)
+	utility.WriteJSON(w, http.StatusOK, "All projects deleted successfully", nil)
 }

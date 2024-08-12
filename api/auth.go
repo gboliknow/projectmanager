@@ -1,11 +1,11 @@
 package api
 
 import (
-	"REST_API_WITH_GO/internal/utility"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"projectmanager/internal/utility"
 	"strconv"
 	"time"
 
@@ -15,7 +15,7 @@ import (
 
 func WithJWTAuth(handlerFunc http.HandlerFunc, store Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tokenString, err :=  utility. GetTokenFromRequest(r)
+		tokenString, err := utility.GetTokenFromRequest(r)
 		if err != nil {
 			errorHandler(w, "missing or invalid token")
 			return

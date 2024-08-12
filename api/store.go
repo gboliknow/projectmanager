@@ -1,9 +1,9 @@
 package api
 
 import (
-	"REST_API_WITH_GO/internal/types"
 	"database/sql"
 	"fmt"
+	"projectmanager/internal/types"
 )
 
 type Store interface {
