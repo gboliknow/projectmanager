@@ -11,9 +11,12 @@ type Store interface {
 	GetUserByID(id string) (*types.User, error)
 	GetUserByEmail(email string) (*types.User, error)
 	CreateUser(u *types.User) (*types.User, error)
+
 	//Tasks
 	CreateTask(t *types.Task) (*types.Task, error)
 	GetTask(id string) (*types.Task, error)
+	TaskExists(t *types.Task) (bool, error)
+	GetMyTasks(userID int64, status string) ([]types.Task, error)
 
 	//Projects
 	CreateProject(p *types.Project) error
@@ -70,10 +73,43 @@ func (s *Storage) CreateTask(t *types.Task) (*types.Task, error) {
 	return t, nil
 }
 
+func (s *Storage) TaskExists(t *types.Task) (bool, error) {
+	var count int
+	query := "SELECT COUNT(*) FROM tasks WHERE name = ? AND projectID = ?"
+	err := s.db.QueryRow(query, t.Name, t.ProjectID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
 func (s *Storage) GetTask(id string) (*types.Task, error) {
 	var t types.Task
 	err := s.db.QueryRow("SELECT id, name, status, projectId, AssignedToID, createdAt FROM tasks WHERE id = ?", id).Scan(&t.ID, &t.Name, &t.Status, &t.ProjectID, &t.AssignedToID, &t.CreatedAt)
 	return &t, err
+}
+
+func (s *Storage) GetMyTasks(userID int64, status string) ([]types.Task, error) {
+	var tasks []types.Task
+	var rows *sql.Rows
+	var err error
+	if status == "" {
+		rows, err = s.db.Query("SELECT id, name, status, projectId, AssignedToID, createdAt FROM tasks WHERE AssignedToID = ?", userID)
+	} else {
+		rows, err = s.db.Query("SELECT id, name, status, projectId, AssignedToID, createdAt FROM tasks WHERE AssignedToID = ? AND status = ?", userID, status)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t types.Task
+		if err := rows.Scan(&t.ID, &t.Name, &t.Status, &t.ProjectID, &t.AssignedToID, &t.CreatedAt); err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, t)
+	}
+	return tasks, nil
 }
 
 func (s *Storage) GetUserByID(id string) (*types.User, error) {

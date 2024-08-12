@@ -62,7 +62,7 @@ func (s *ProjectService) handleCreateProject(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	utility.WriteJSON(w, http.StatusCreated, "Ok", project)
+	utility.WriteJSON(w, http.StatusCreated, "Project created successfully", project)
 }
 
 func (s *ProjectService) handleGetProject(w http.ResponseWriter, r *http.Request) {

@@ -85,3 +85,33 @@ func HashPassword(password string) (string, error) {
 
 	return string(hash), nil
 }
+
+
+func getUserIDFromToken(tokenString string, secret []byte) (int64, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return secret, nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return 0, fmt.Errorf("invalid token")
+	}
+
+	userIDStr, ok := claims["userID"].(string)
+	if !ok {
+		return 0, fmt.Errorf("userID not found in token")
+	}
+
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid userID format")
+	}
+
+	return userID, nil
+}
