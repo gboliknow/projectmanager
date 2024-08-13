@@ -1,8 +1,11 @@
 package utility
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"projectmanager/internal/types"
 	"strings"
@@ -33,4 +36,13 @@ func GetTokenFromRequest(r *http.Request) (string, error) {
 		return tokenAuth, nil
 	}
 	return "", errTokenMissing
+}
+
+func GenerateResetToken() string {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		log.Fatalf("Failed to generate token: %v", err)
+	}
+	return fmt.Sprintf("%x", b)
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/smtp"
 	"projectmanager/internal/utility"
 	"strconv"
 	"time"
@@ -131,4 +132,31 @@ func getUserIDFromToken(tokenString string, secret []byte) (int64, error) {
 	}
 
 	return userID, nil
+}
+
+func sendPasswordResetEmail(email, token string) error {
+	from := "gboliknow@gmail.com"
+	password := "*********"
+	fmt.Println(token)
+	to := email
+	subject := "Password Reset Request"
+	body := fmt.Sprintf("To reset your password, use the following token: %s", token)
+
+	msg := []byte(fmt.Sprintf("Subject: %s\n\n%s", subject, body))
+
+	auth := smtp.PlainAuth("", from, password, "smtp.example.com")
+	err := smtp.SendMail("smtp.example.com:587", auth, from, []string{to}, msg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func validatePassword(password string) error {
+    if len(password) < 8 {
+        return fmt.Errorf("password must be at least 8 characters long")
+    }
+    // Add more checks for password strength as needed
+    return nil
 }

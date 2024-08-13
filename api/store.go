@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"projectmanager/internal/types"
+	"time"
 )
 
 type Store interface {
@@ -12,6 +13,10 @@ type Store interface {
 	GetUserByEmail(email string) (*types.User, error)
 	CreateUser(u *types.User) (*types.User, error)
 	UpdateUserProfile(userID int64, updateRequest *types.UserUpdateRequest) (*types.User, error)
+	UpdatePassword(userID int64, newPassword string) error
+	ValidateResetToken(token string) (int64, error)
+	InvalidateResetToken(token string) error
+	RequestPasswordReset(email, resetToken string) error
 
 	//Tasks
 	CreateTask(t *types.Task) (*types.Task, error)
@@ -115,13 +120,13 @@ func (s *Storage) GetMyTasks(userID int64, status string) ([]types.Task, error) 
 
 func (s *Storage) GetUserByID(id int64) (*types.User, error) {
 	var u types.User
-	err := s.db.QueryRow("SELECT id, email, firstName, lastName, phone, address, createdAt FROM users WHERE id = ?", id).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.Address, &u.CreatedAt)
+	err := s.db.QueryRow("SELECT id, email, firstName, lastName, phone, address,password, createdAt FROM users WHERE id = ?", id).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.Address, &u.Password, &u.CreatedAt)
 	return &u, err
 }
 
 func (s *Storage) GetUserByEmail(email string) (*types.User, error) {
 	var u types.User
-	err := s.db.QueryRow("SELECT id, email, firstName, lastName, phone, address, createdAt FROM users WHERE email = ?", email).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.Address, &u.CreatedAt)
+	err := s.db.QueryRow("SELECT id, email, firstName, lastName, phone, address,password, createdAt FROM users WHERE email = ?", email).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.Address, &u.Password, &u.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")
@@ -260,4 +265,64 @@ func (s *Storage) GetProjectByName(name string) (bool, error) {
 		return false, err // Other errors (e.g., query issues)
 	}
 	return true, nil // Project found
+}
+
+func (s *Storage) RequestPasswordReset(email, resetToken string) error {
+	// Check if the email exists
+	var userID int64
+	err := s.db.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("email not found")
+		}
+		return err
+	}
+
+	// Save the reset token and expiration to the database
+	expiration := time.Now().Add(1 * time.Hour) // Token valid for 1 hour
+	_, err = s.db.Exec(`
+		INSERT INTO password_reset_tokens (user_id, token, expiration)
+		VALUES (?, ?, ?)
+		ON DUPLICATE KEY UPDATE token = VALUES(token), expiration = VALUES(expiration)
+	`, userID, resetToken, expiration)
+
+	return err
+}
+
+func (s *Storage) UpdatePassword(userID int64, newPassword string) error {
+	_, err := s.db.Exec(`
+		UPDATE users
+		SET password = ?
+		WHERE id = ?
+	`, newPassword, userID)
+	return err
+}
+
+func (s *Storage) ValidateResetToken(token string) (int64, error) {
+	var userID int64
+	var expiration time.Time
+
+	err := s.db.QueryRow(`
+		SELECT user_id, expiration
+		FROM password_reset_tokens
+		WHERE token = ?
+	`, token).Scan(&userID, &expiration)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("invalid token")
+		}
+		return 0, err
+	}
+
+	if time.Now().After(expiration) {
+		return 0, fmt.Errorf("token expired")
+	}
+
+	return userID, nil
+}
+
+func (s *Storage) InvalidateResetToken(token string) error {
+	_, err := s.db.Exec("DELETE FROM password_reset_tokens WHERE token = ?", token)
+	return err
 }

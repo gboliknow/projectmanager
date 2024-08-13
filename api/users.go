@@ -32,8 +32,8 @@ func (s *UserService) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/users/login", s.handleUserLogin).Methods("POST")
 	r.HandleFunc("/users/me", WithJWTAuth(s.handleUpdateUserProfile, s.store)).Methods("PUT")
 	r.HandleFunc("/users/me", s.handleGetUserInfo).Methods("GET")
-	// r.HandleFunc("/users/reset-password", s.handleUpdateUserProfile).Methods("POST")
-	// r.HandleFunc("/users/reset-password/confirm", s.handleUpdateUserProfile).Methods("POST")
+	r.HandleFunc("/users/reset-password", s.handlePasswordResetRequest).Methods("POST")
+	r.HandleFunc("/users/reset-password/confirm", s.handleResetPassword).Methods("POST")
 	// r.HandleFunc("/users/logout", s.handleUpdateUserProfile).Methods("POST")
 }
 
@@ -110,7 +110,7 @@ func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
+	fmt.Printf("the user payload %v", user)
 	if !CheckPasswordHash(payload.Password, user.Password) {
 		utility.WriteJSON(w, http.StatusUnauthorized, "Invalid email or password", nil)
 		return
@@ -217,37 +217,83 @@ func (s *UserService) handleUpdateUserProfile(w http.ResponseWriter, r *http.Req
 	utility.WriteJSON(w, http.StatusOK, "Profile updated", responseData)
 }
 
-// func (s *UserService) handlePasswordResetRequest(w http.ResponseWriter, r *http.Request) {
-//     var payload types.PasswordResetRequest
-//     if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-//         utility.WriteJSON(w, http.StatusBadRequest, "Invalid request payload", nil)
-//         return
-//     }
+func (s *UserService) handlePasswordResetRequest(w http.ResponseWriter, r *http.Request) {
+	var payload types.PasswordResetRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		utility.WriteJSON(w, http.StatusBadRequest, "Invalid request payload", nil)
+		return
+	}
 
-//     err := s.store.RequestPasswordReset(payload.Email)
-//     if err != nil {
-//         utility.WriteJSON(w, http.StatusInternalServerError, "Error processing request", nil)
-//         return
-//     }
+	// Generate a reset token
+	resetToken := utility.GenerateResetToken()
 
-//     utility.WriteJSON(w, http.StatusOK, "Password reset email sent", nil)
-// }
+	// Store the token and expiration
+	err := s.store.RequestPasswordReset(payload.Email, resetToken)
+	if err != nil {
+		utility.WriteJSON(w, http.StatusInternalServerError, "Error processing request", nil)
+		return
+	}
 
-// func (s *UserService) handleConfirmPasswordReset(w http.ResponseWriter, r *http.Request) {
-//     var payload types.PasswordResetConfirm
-//     if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-//         utility.WriteJSON(w, http.StatusBadRequest, "Invalid request payload", nil)
-//         return
-//     }
+	// Send email with the reset token
+	err = sendPasswordResetEmail(payload.Email, resetToken)
+	if err != nil {
+		fmt.Println(err.Error())
+		utility.WriteJSON(w, http.StatusInternalServerError, "Error sending email", nil)
+		return
+	}
 
-//     err := s.store.ConfirmPasswordReset(payload.Token, payload.NewPassword)
-//     if err != nil {
-//         utility.WriteJSON(w, http.StatusInternalServerError, "Error resetting password", nil)
-//         return
-//     }
+	utility.WriteJSON(w, http.StatusOK, "Password reset email sent", nil)
+}
 
-//     utility.WriteJSON(w, http.StatusOK, "Password reset successful", nil)
-// }
+func (s *UserService) handleResetPassword(w http.ResponseWriter, r *http.Request) {
+	var payload types.PasswordResetPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		utility.WriteJSON(w, http.StatusBadRequest, "Invalid request payload", nil)
+		return
+	}
+
+	// Validate that required fields are not empty
+	if payload.ResetToken == "" || payload.NewPassword == "" {
+		utility.WriteJSON(w, http.StatusBadRequest, "Reset token and new password are required", nil)
+		return
+	}
+
+	// Validate the reset token and get user ID
+	userID, err := s.store.ValidateResetToken(payload.ResetToken)
+	if err != nil {
+		utility.WriteJSON(w, http.StatusBadRequest, "Invalid or expired reset token", nil)
+		return
+	}
+
+	// Validate the new password
+	if err := validatePassword(payload.NewPassword); err != nil {
+		utility.WriteJSON(w, http.StatusBadRequest, "Weak password", nil)
+		return
+	}
+
+	// Hash the new password
+	hashedPassword, err := HashPassword(payload.NewPassword)
+	if err != nil {
+		utility.WriteJSON(w, http.StatusInternalServerError, "Error hashing password", nil)
+		return
+	}
+
+	// Update the user's password
+	err = s.store.UpdatePassword(userID, hashedPassword)
+	if err != nil {
+		utility.WriteJSON(w, http.StatusInternalServerError, "Error updating password", nil)
+		return
+	}
+
+	// Invalidate the reset token
+	err = s.store.InvalidateResetToken(payload.ResetToken)
+	if err != nil {
+		utility.WriteJSON(w, http.StatusInternalServerError, "Error invalidating reset token", nil)
+		return
+	}
+
+	utility.WriteJSON(w, http.StatusOK, "Password updated successfully", nil)
+}
 
 // func (s *UserService) handleLogout(w http.ResponseWriter, r *http.Request) {
 // 	// Handle token invalidation or session management here
@@ -302,6 +348,8 @@ func createAndSetAuthCookie(userID int64, w http.ResponseWriter) (string, error)
 }
 
 func CheckPasswordHash(password, hash string) bool {
+	fmt.Println("the assigned password " + password)
+	fmt.Println("the assigned password " + hash)
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }

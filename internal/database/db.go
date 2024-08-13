@@ -45,6 +45,9 @@ func (s *MySQLStorage) Init() (*sql.DB, error) {
 		return nil, err
 	}
 
+	if err := s.createPasswordResetTokensTable(); err != nil {
+		return nil, err
+	}
 	return s.db, nil
 }
 
@@ -96,6 +99,22 @@ func (s *MySQLStorage) createTasksTable() error {
 			FOREIGN KEY (AssignedToID) REFERENCES users(id),
 			FOREIGN KEY (projectId) REFERENCES projects(id)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+	`)
+
+	return err
+}
+
+func (s *MySQLStorage) createPasswordResetTokensTable() error {
+	_, err := s.db.Exec(`
+	CREATE TABLE IF NOT EXISTS password_reset_tokens (
+		id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+		user_id INT UNSIGNED NOT NULL,
+		token VARCHAR(255) NOT NULL,
+		expiration TIMESTAMP NOT NULL,
+		PRIMARY KEY (id),
+		FOREIGN KEY (user_id) REFERENCES users(id),
+		UNIQUE KEY (token)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 	`)
 
 	return err
