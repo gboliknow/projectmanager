@@ -348,8 +348,6 @@ func createAndSetAuthCookie(userID int64, w http.ResponseWriter) (string, error)
 }
 
 func CheckPasswordHash(password, hash string) bool {
-	fmt.Println("the assigned password " + password)
-	fmt.Println("the assigned password " + hash)
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
