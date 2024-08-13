@@ -11,6 +11,7 @@ type Store interface {
 	GetUserByID(id string) (*types.User, error)
 	GetUserByEmail(email string) (*types.User, error)
 	CreateUser(u *types.User) (*types.User, error)
+	UpdateUserProfile(userID int64, updateRequest *types.UserUpdateRequest) (*types.User, error)
 
 	//Tasks
 	CreateTask(t *types.Task) (*types.Task, error)
@@ -130,6 +131,68 @@ func (s *Storage) GetUserByEmail(email string) (*types.User, error) {
 	return &u, nil
 }
 
+
+func (s *Storage) UpdateUserProfile(userID int64, updateRequest *types.UserUpdateRequest) (*types.User, error) {
+    query := "UPDATE users SET"
+    args := []interface{}{}
+    argCount := 1
+
+    if updateRequest.FirstName != nil {
+        query += " firstName = ?"
+        args = append(args, *updateRequest.FirstName)
+        argCount++
+    }
+    if updateRequest.LastName != nil {
+        if argCount > 1 {
+            query += ","
+        }
+        query += " lastName = ?"
+        args = append(args, *updateRequest.LastName)
+        argCount++
+    }
+    if updateRequest.Email != nil {
+        if argCount > 1 {
+            query += ","
+        }
+        query += " email = ?"
+        args = append(args, *updateRequest.Email)
+        argCount++
+    }
+    // Add more fields similarly
+    if updateRequest.Phone != nil {
+        if argCount > 1 {
+            query += ","
+        }
+        query += " phone = ?"
+        args = append(args, *updateRequest.Phone)
+        argCount++
+    }
+    if updateRequest.Address != nil {
+        if argCount > 1 {
+            query += ","
+        }
+        query += " address = ?"
+        args = append(args, *updateRequest.Address)
+        argCount++
+    }
+
+    query += " WHERE id = ?"
+    args = append(args, userID)
+
+    _, err := s.db.Exec(query, args...)
+    if err != nil {
+        return nil, err
+    }
+
+    // Fetch the updated user details
+    var updatedUser types.User
+    err = s.db.QueryRow("SELECT id, email, firstName, lastName, phone, address, createdAt FROM users WHERE id = ?", userID).Scan(&updatedUser.ID, &updatedUser.Email, &updatedUser.FirstName, &updatedUser.LastName, &updatedUser.Phone, &updatedUser.Address, &updatedUser.CreatedAt)
+    if err != nil {
+        return nil, err
+    }
+
+    return &updatedUser, nil
+}
 func (s *Storage) CreateProject(p *types.Project) error {
 	result, err := s.db.Exec("INSERT INTO projects (name) VALUES (?)", p.Name)
 	if err != nil {

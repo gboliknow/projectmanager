@@ -4,9 +4,8 @@ run: build
 	@./bin/api
 
 build:
-	@go build -o bin/api
+	@mkdir -p bin
+	@go build -o bin/api ./cmd/app
 
 test:
 	@go test -v ./...
-
-

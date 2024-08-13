@@ -41,6 +41,9 @@ func (s *MySQLStorage) Init() (*sql.DB, error) {
 	if err := s.createTasksTable(); err != nil {
 		return nil, err
 	}
+	if err := s.applySchemaChanges(); err != nil {
+		return nil, err
+	}
 
 	return s.db, nil
 }
@@ -54,6 +57,8 @@ func (s *MySQLStorage) createUsersTable() error {
 			lastName VARCHAR(255) NOT NULL,
 			password VARCHAR(255) NOT NULL,
 			createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			phone VARCHAR(20),
+			address VARCHAR(255),
 
 			PRIMARY KEY (id),
 			UNIQUE KEY (email)
@@ -94,4 +99,49 @@ func (s *MySQLStorage) createTasksTable() error {
 	`)
 
 	return err
+}
+
+func (s *MySQLStorage) applySchemaChanges() error {
+	// Check if the 'phone' column exists
+	columnExists, err := s.columnExists("users", "phone")
+	if err != nil {
+		return err
+	}
+	if !columnExists {
+		_, err := s.db.Exec("ALTER TABLE users ADD COLUMN phone VARCHAR(20)")
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check if the 'address' column exists
+	columnExists, err = s.columnExists("users", "address")
+	if err != nil {
+		return err
+	}
+	if !columnExists {
+		_, err := s.db.Exec("ALTER TABLE users ADD COLUMN address VARCHAR(255)")
+		if err != nil {
+			return err
+		}
+	}
+
+	// Apply similar changes to other tables if needed
+
+	return nil
+}
+
+func (s *MySQLStorage) columnExists(tableName, columnName string) (bool, error) {
+	query := `
+        SELECT COUNT(*) 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = ? 
+          AND COLUMN_NAME = ?
+    `
+	var count int
+	err := s.db.QueryRow(query, tableName, columnName).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

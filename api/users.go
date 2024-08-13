@@ -29,6 +29,11 @@ func NewUserService(s Store) *UserService {
 func (s *UserService) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/users/register", s.handleUserRegister).Methods("POST")
 	r.HandleFunc("/users/login", s.handleUserLogin).Methods("POST")
+	r.HandleFunc("/users/me", WithJWTAuth(s.handleUpdateUserProfile, s.store)).Methods("PUT")
+	// r.HandleFunc("/users/me", s.handleUpdateUserProfile).Methods("GET")
+	// r.HandleFunc("/users/reset-password", s.handleUpdateUserProfile).Methods("POST")
+	// r.HandleFunc("/users/reset-password/confirm", s.handleUpdateUserProfile).Methods("POST")
+	// r.HandleFunc("/users/logout", s.handleUpdateUserProfile).Methods("POST")
 }
 
 func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request) {
@@ -127,10 +132,90 @@ func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 			LastName:  user.LastName,
 			Email:     user.Email,
 			CreatedAt: user.CreatedAt,
+			Address:   user.Address,
+			Phone:     user.Phone,
 		},
 	}
 	utility.WriteJSON(w, http.StatusOK, "Successful", responseData)
 }
+
+func (s *UserService) handleUpdateUserProfile(w http.ResponseWriter, r *http.Request) {
+	tokenString, err := utility.GetTokenFromRequest(r)
+	if err != nil {
+		errorHandler(w, "missing or invalid token")
+		return
+	}
+	if tokenString == "" {
+		utility.WriteJSON(w, http.StatusUnauthorized, "Missing token", nil)
+		return
+	}
+	secret := []byte(config.Envs.JWTSecret)
+	userID, err := getUserIDFromToken(tokenString, secret)
+	if err != nil {
+		utility.WriteJSON(w, http.StatusUnauthorized, "Invalid token", nil)
+		return
+	}
+
+	var payload types.UserUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		utility.WriteJSON(w, http.StatusBadRequest, "Invalid request payload", nil)
+		return
+	}
+
+	user, err := s.store.UpdateUserProfile(userID, &payload)
+	responseData := types.UserResponse{
+		ID:        user.ID,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     user.Email,
+		CreatedAt: user.CreatedAt,
+		Address:   user.Address,
+		Phone:     user.Phone,
+	}
+	if err != nil {
+		utility.WriteJSON(w, http.StatusInternalServerError, "Error updating profile", nil)
+		return
+	}
+
+	utility.WriteJSON(w, http.StatusOK, "Profile updated", responseData)
+}
+
+// func (s *UserService) handlePasswordResetRequest(w http.ResponseWriter, r *http.Request) {
+//     var payload types.PasswordResetRequest
+//     if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+//         utility.WriteJSON(w, http.StatusBadRequest, "Invalid request payload", nil)
+//         return
+//     }
+
+//     err := s.store.RequestPasswordReset(payload.Email)
+//     if err != nil {
+//         utility.WriteJSON(w, http.StatusInternalServerError, "Error processing request", nil)
+//         return
+//     }
+
+//     utility.WriteJSON(w, http.StatusOK, "Password reset email sent", nil)
+// }
+
+// func (s *UserService) handleConfirmPasswordReset(w http.ResponseWriter, r *http.Request) {
+//     var payload types.PasswordResetConfirm
+//     if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+//         utility.WriteJSON(w, http.StatusBadRequest, "Invalid request payload", nil)
+//         return
+//     }
+
+//     err := s.store.ConfirmPasswordReset(payload.Token, payload.NewPassword)
+//     if err != nil {
+//         utility.WriteJSON(w, http.StatusInternalServerError, "Error resetting password", nil)
+//         return
+//     }
+
+//     utility.WriteJSON(w, http.StatusOK, "Password reset successful", nil)
+// }
+
+// func (s *UserService) handleLogout(w http.ResponseWriter, r *http.Request) {
+// 	// Handle token invalidation or session management here
+// 	utility.WriteJSON(w, http.StatusOK, "Logout successful", nil)
+// }
 
 func validateUserPayload(user *types.User) error {
 	if user.Email == "" {
