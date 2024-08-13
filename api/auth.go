@@ -22,27 +22,45 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store Store) http.HandlerFunc {
 
 		token, err := validateJWT(tokenString)
 		if err != nil {
-			log.Printf("failed to authenticate token with err : %v", err)
+			log.Printf("Failed to authenticate token: %v", err)
 			errorHandler(w, "permission denied")
 			return
 		}
 
 		if !token.Valid {
-			log.Printf("failed to authenticate token because it invalid")
+			log.Printf("Token is invalid")
 			errorHandler(w, "permission denied")
 			return
 		}
 
-		claims := token.Claims.(jwt.MapClaims)
-		userID := claims["userID"].(string)
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			log.Printf("Invalid token claims")
+			errorHandler(w, "permission denied")
+			return
+		}
+
+		userIDStr, ok := claims["userID"].(string)
+		if !ok {
+			log.Printf("UserID not found or invalid in token")
+			errorHandler(w, "permission denied")
+			return
+		}
+
+		userID, err := strconv.ParseInt(userIDStr, 10, 64)
+		if err != nil {
+			log.Printf("Failed to parse userID from token: %v", err)
+			errorHandler(w, "permission denied")
+			return
+		}
 
 		_, err = store.GetUserByID(userID)
-
 		if err != nil {
-			log.Printf("failed to get user by id: %v", err)
+			log.Printf("Failed to get user by ID: %v", err)
 			errorHandler(w, "permission denied")
 			return
 		}
+
 		handlerFunc(w, r)
 	}
 }
@@ -85,7 +103,6 @@ func HashPassword(password string) (string, error) {
 
 	return string(hash), nil
 }
-
 
 func getUserIDFromToken(tokenString string, secret []byte) (int64, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {

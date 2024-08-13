@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"projectmanager/internal/config"
@@ -30,7 +31,7 @@ func (s *UserService) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/users/register", s.handleUserRegister).Methods("POST")
 	r.HandleFunc("/users/login", s.handleUserLogin).Methods("POST")
 	r.HandleFunc("/users/me", WithJWTAuth(s.handleUpdateUserProfile, s.store)).Methods("PUT")
-	// r.HandleFunc("/users/me", s.handleUpdateUserProfile).Methods("GET")
+	r.HandleFunc("/users/me", s.handleGetUserInfo).Methods("GET")
 	// r.HandleFunc("/users/reset-password", s.handleUpdateUserProfile).Methods("POST")
 	// r.HandleFunc("/users/reset-password/confirm", s.handleUpdateUserProfile).Methods("POST")
 	// r.HandleFunc("/users/logout", s.handleUpdateUserProfile).Methods("POST")
@@ -137,6 +138,42 @@ func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	utility.WriteJSON(w, http.StatusOK, "Successful", responseData)
+}
+
+func (s *UserService) handleGetUserInfo(w http.ResponseWriter, r *http.Request) {
+	tokenString, err := utility.GetTokenFromRequest(r)
+	if err != nil {
+		errorHandler(w, "missing or invalid token")
+		return
+	}
+	if tokenString == "" {
+		utility.WriteJSON(w, http.StatusUnauthorized, "Missing token", nil)
+		return
+	}
+	secret := []byte(config.Envs.JWTSecret)
+	userID, err := getUserIDFromToken(tokenString, secret)
+	if err != nil {
+		utility.WriteJSON(w, http.StatusUnauthorized, "Invalid token", nil)
+		return
+	}
+	user, err := s.store.GetUserByID(userID)
+	responseData := types.UserResponse{
+		ID:        user.ID,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     user.Email,
+		CreatedAt: user.CreatedAt,
+		Address:   user.Address,
+		Phone:     user.Phone,
+	}
+
+	if err != nil {
+		fmt.Println(err.Error())
+		utility.WriteJSON(w, http.StatusInternalServerError, "Error Fetching User", nil)
+		return
+	}
+
+	utility.WriteJSON(w, http.StatusOK, "User Fetched Successfully", responseData)
 }
 
 func (s *UserService) handleUpdateUserProfile(w http.ResponseWriter, r *http.Request) {

@@ -8,7 +8,7 @@ import (
 
 type Store interface {
 	// Users
-	GetUserByID(id string) (*types.User, error)
+	GetUserByID(id int64) (*types.User, error)
 	GetUserByEmail(email string) (*types.User, error)
 	CreateUser(u *types.User) (*types.User, error)
 	UpdateUserProfile(userID int64, updateRequest *types.UserUpdateRequest) (*types.User, error)
@@ -113,15 +113,15 @@ func (s *Storage) GetMyTasks(userID int64, status string) ([]types.Task, error) 
 	return tasks, nil
 }
 
-func (s *Storage) GetUserByID(id string) (*types.User, error) {
+func (s *Storage) GetUserByID(id int64) (*types.User, error) {
 	var u types.User
-	err := s.db.QueryRow("SELECT id, email, firstName, lastName, createdAt FROM users WHERE id = ?", id).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt)
+	err := s.db.QueryRow("SELECT id, email, firstName, lastName, phone, address, createdAt FROM users WHERE id = ?", id).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.Address, &u.CreatedAt)
 	return &u, err
 }
 
 func (s *Storage) GetUserByEmail(email string) (*types.User, error) {
 	var u types.User
-	err := s.db.QueryRow("SELECT id, email, firstName, lastName, createdAt, password FROM users WHERE email = ?", email).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt, &u.Password)
+	err := s.db.QueryRow("SELECT id, email, firstName, lastName, phone, address, createdAt FROM users WHERE email = ?", email).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.Address, &u.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")
@@ -131,67 +131,66 @@ func (s *Storage) GetUserByEmail(email string) (*types.User, error) {
 	return &u, nil
 }
 
-
 func (s *Storage) UpdateUserProfile(userID int64, updateRequest *types.UserUpdateRequest) (*types.User, error) {
-    query := "UPDATE users SET"
-    args := []interface{}{}
-    argCount := 1
+	query := "UPDATE users SET"
+	args := []interface{}{}
+	argCount := 1
 
-    if updateRequest.FirstName != nil {
-        query += " firstName = ?"
-        args = append(args, *updateRequest.FirstName)
-        argCount++
-    }
-    if updateRequest.LastName != nil {
-        if argCount > 1 {
-            query += ","
-        }
-        query += " lastName = ?"
-        args = append(args, *updateRequest.LastName)
-        argCount++
-    }
-    if updateRequest.Email != nil {
-        if argCount > 1 {
-            query += ","
-        }
-        query += " email = ?"
-        args = append(args, *updateRequest.Email)
-        argCount++
-    }
-    // Add more fields similarly
-    if updateRequest.Phone != nil {
-        if argCount > 1 {
-            query += ","
-        }
-        query += " phone = ?"
-        args = append(args, *updateRequest.Phone)
-        argCount++
-    }
-    if updateRequest.Address != nil {
-        if argCount > 1 {
-            query += ","
-        }
-        query += " address = ?"
-        args = append(args, *updateRequest.Address)
-        argCount++
-    }
+	if updateRequest.FirstName != nil {
+		query += " firstName = ?"
+		args = append(args, *updateRequest.FirstName)
+		argCount++
+	}
+	if updateRequest.LastName != nil {
+		if argCount > 1 {
+			query += ","
+		}
+		query += " lastName = ?"
+		args = append(args, *updateRequest.LastName)
+		argCount++
+	}
+	if updateRequest.Email != nil {
+		if argCount > 1 {
+			query += ","
+		}
+		query += " email = ?"
+		args = append(args, *updateRequest.Email)
+		argCount++
+	}
+	// Add more fields similarly
+	if updateRequest.Phone != nil {
+		if argCount > 1 {
+			query += ","
+		}
+		query += " phone = ?"
+		args = append(args, *updateRequest.Phone)
+		argCount++
+	}
+	if updateRequest.Address != nil {
+		if argCount > 1 {
+			query += ","
+		}
+		query += " address = ?"
+		args = append(args, *updateRequest.Address)
+		argCount++
+	}
 
-    query += " WHERE id = ?"
-    args = append(args, userID)
+	query += " WHERE id = ?"
+	args = append(args, userID)
 
-    _, err := s.db.Exec(query, args...)
-    if err != nil {
-        return nil, err
-    }
+	_, err := s.db.Exec(query, args...)
+	if err != nil {
+		return nil, err
+	}
 
-    // Fetch the updated user details
-    var updatedUser types.User
-    err = s.db.QueryRow("SELECT id, email, firstName, lastName, phone, address, createdAt FROM users WHERE id = ?", userID).Scan(&updatedUser.ID, &updatedUser.Email, &updatedUser.FirstName, &updatedUser.LastName, &updatedUser.Phone, &updatedUser.Address, &updatedUser.CreatedAt)
-    if err != nil {
-        return nil, err
-    }
+	// Fetch the updated user details
+	var updatedUser types.User
+	err = s.db.QueryRow("SELECT id, email, firstName, lastName, phone, address, createdAt FROM users WHERE id = ?", userID).Scan(&updatedUser.ID, &updatedUser.Email, &updatedUser.FirstName, &updatedUser.LastName, &updatedUser.Phone, &updatedUser.Address, &updatedUser.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
 
-    return &updatedUser, nil
+	return &updatedUser, nil
 }
 func (s *Storage) CreateProject(p *types.Project) error {
 	result, err := s.db.Exec("INSERT INTO projects (name) VALUES (?)", p.Name)
