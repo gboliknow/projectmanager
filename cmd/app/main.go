@@ -22,7 +22,7 @@ func main() {
 	}
 	sqlStorage := database.NewMySQLStorage(cfg)
 
-	db, err := sqlStorage.Init()
+	db, err := sqlStorage.InitializeDatabase()
 
 	if err != nil {
 		log.Fatal(err)
