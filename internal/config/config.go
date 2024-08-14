@@ -16,9 +16,9 @@ type Config struct {
 	JWTSecret  string
 }
 
-var Envs = initConfig()
+var Envs = InitializeConfig()
 
-func initConfig() Config {
+func InitializeConfig() Config {
 
 	err := godotenv.Load()
 	if err != nil {

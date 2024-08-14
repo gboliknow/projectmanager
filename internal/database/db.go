@@ -28,7 +28,7 @@ func NewMySQLStorage(cfg mysql.Config) *MySQLStorage {
 	return &MySQLStorage{db: db}
 }
 
-func (s *MySQLStorage) Init() (*sql.DB, error) {
+func (s *MySQLStorage) InitializeDatabase() (*sql.DB, error) {
 	// initialize the tables
 	if err := s.createUsersTable(); err != nil {
 		return nil, err
