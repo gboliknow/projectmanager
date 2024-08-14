@@ -21,6 +21,13 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store Store) http.HandlerFunc {
 			return
 		}
 
+		isBlacklisted, err := store.IsTokenBlacklisted(tokenString)
+		if err != nil || isBlacklisted {
+			log.Printf("token is blacklisted")
+			errorHandler(w, "permission denied")
+			return
+		}
+
 		token, err := validateJWT(tokenString)
 		if err != nil {
 			log.Printf("Failed to authenticate token: %v", err)
@@ -152,11 +159,10 @@ func sendPasswordResetEmail(email, token string) error {
 	return nil
 }
 
-
 func validatePassword(password string) error {
-    if len(password) < 8 {
-        return fmt.Errorf("password must be at least 8 characters long")
-    }
-    // Add more checks for password strength as needed
-    return nil
+	if len(password) < 8 {
+		return fmt.Errorf("password must be at least 8 characters long")
+	}
+	// Add more checks for password strength as needed
+	return nil
 }

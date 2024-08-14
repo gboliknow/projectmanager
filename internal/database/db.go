@@ -48,6 +48,10 @@ func (s *MySQLStorage) Init() (*sql.DB, error) {
 	if err := s.createPasswordResetTokensTable(); err != nil {
 		return nil, err
 	}
+
+	if err := s.createTokenBlacklistTable(); err != nil {
+		return nil, err
+	}
 	return s.db, nil
 }
 
@@ -163,4 +167,16 @@ func (s *MySQLStorage) columnExists(tableName, columnName string) (bool, error) 
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (s *MySQLStorage) createTokenBlacklistTable() error {
+	_, err := s.db.Exec(`
+	CREATE TABLE token_blacklist (
+		token VARCHAR(255) NOT NULL,
+		createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (token)
+	);
+	`)
+
+	return err
 }

@@ -27,12 +27,12 @@ func initConfig() Config {
 	}
 
 	return Config{
-		Port:       getEnv("PORT", "55000"),
+		Port:       getEnv("PORT", "55004"),
 		DBUser:     getEnv("DB_USER", "user_1"),
 		DBPassword: getEnv("DB_PASSWORD", "password"),
 		DBName:     getEnv("DB_NAME", "projectmanager"),
 		JWTSecret:  getEnv("JWT_SECRET", "c757b8c7cacc1d63b3d37a5688eaef1809687c1d3a4330192c7fbfe93a8dbeb5"),
-		DBAddress:  fmt.Sprintf("%s:%s", getEnv("DB_HOST", "127.0.0.1"), getEnv("DB_PORT", "55000")),
+		DBAddress:  fmt.Sprintf("%s:%s", getEnv("DB_HOST", "127.0.0.1"), getEnv("DB_PORT", "55004")),
 	}
 }
 

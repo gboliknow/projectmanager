@@ -17,6 +17,8 @@ type Store interface {
 	ValidateResetToken(token string) (int64, error)
 	InvalidateResetToken(token string) error
 	RequestPasswordReset(email, resetToken string) error
+	BlacklistToken(tokenString string) error
+	IsTokenBlacklisted(token string) (bool, error)
 
 	//Tasks
 	CreateTask(t *types.Task) (*types.Task, error)
@@ -325,4 +327,19 @@ func (s *Storage) ValidateResetToken(token string) (int64, error) {
 func (s *Storage) InvalidateResetToken(token string) error {
 	_, err := s.db.Exec("DELETE FROM password_reset_tokens WHERE token = ?", token)
 	return err
+}
+
+func (s *Storage) BlacklistToken(tokenString string) error {
+	_, err := s.db.Exec("INSERT INTO token_blacklist (token) VALUES (?)", tokenString)
+	return err
+}
+
+func (s *Storage) IsTokenBlacklisted(token string) (bool, error) {
+	var count int
+	query := "SELECT COUNT(*) FROM blacklisted_tokens WHERE token = ?"
+	err := s.db.QueryRow(query, token).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

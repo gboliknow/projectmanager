@@ -31,10 +31,10 @@ func (s *UserService) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/users/register", s.handleUserRegister).Methods("POST")
 	r.HandleFunc("/users/login", s.handleUserLogin).Methods("POST")
 	r.HandleFunc("/users/me", WithJWTAuth(s.handleUpdateUserProfile, s.store)).Methods("PUT")
-	r.HandleFunc("/users/me", s.handleGetUserInfo).Methods("GET")
+	r.HandleFunc("/users/me", WithJWTAuth(s.handleGetUserInfo, s.store)).Methods("GET")
 	r.HandleFunc("/users/reset-password", s.handlePasswordResetRequest).Methods("POST")
 	r.HandleFunc("/users/reset-password/confirm", s.handleResetPassword).Methods("POST")
-	// r.HandleFunc("/users/logout", s.handleUpdateUserProfile).Methods("POST")
+	r.HandleFunc("/users/logout", s.handleLogout).Methods("POST")
 }
 
 func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request) {
@@ -295,10 +295,19 @@ func (s *UserService) handleResetPassword(w http.ResponseWriter, r *http.Request
 	utility.WriteJSON(w, http.StatusOK, "Password updated successfully", nil)
 }
 
-// func (s *UserService) handleLogout(w http.ResponseWriter, r *http.Request) {
-// 	// Handle token invalidation or session management here
-// 	utility.WriteJSON(w, http.StatusOK, "Logout successful", nil)
-// }
+func (s *UserService) handleLogout(w http.ResponseWriter, r *http.Request) {
+	tokenString, err := utility.GetTokenFromRequest(r)
+	if err != nil {
+		utility.WriteJSON(w, http.StatusUnauthorized, "Invalid token", nil)
+		return
+	}
+
+	err = s.store.BlacklistToken(tokenString)
+	if err != nil {
+		utility.WriteJSON(w, http.StatusInternalServerError, "Error logging out", nil)
+		return
+	}
+}
 
 func validateUserPayload(user *types.User) error {
 	if user.Email == "" {
