@@ -4,13 +4,21 @@ import (
 	"database/sql"
 	"fmt"
 	"projectmanager/internal/types"
+	"time"
 )
 
 type Store interface {
 	// Users
-	GetUserByID(id string) (*types.User, error)
+	GetUserByID(id int64) (*types.User, error)
 	GetUserByEmail(email string) (*types.User, error)
 	CreateUser(u *types.User) (*types.User, error)
+	UpdateUserProfile(userID int64, updateRequest *types.UserUpdateRequest) (*types.User, error)
+	UpdatePassword(userID int64, newPassword string) error
+	ValidateResetToken(token string) (int64, error)
+	InvalidateResetToken(token string) error
+	RequestPasswordReset(email, resetToken string) error
+	BlacklistToken(tokenString string) error
+	IsTokenBlacklisted(token string) (bool, error)
 
 	//Tasks
 	CreateTask(t *types.Task) (*types.Task, error)
@@ -112,15 +120,15 @@ func (s *Storage) GetMyTasks(userID int64, status string) ([]types.Task, error) 
 	return tasks, nil
 }
 
-func (s *Storage) GetUserByID(id string) (*types.User, error) {
+func (s *Storage) GetUserByID(id int64) (*types.User, error) {
 	var u types.User
-	err := s.db.QueryRow("SELECT id, email, firstName, lastName, createdAt FROM users WHERE id = ?", id).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt)
+	err := s.db.QueryRow("SELECT id, email, firstName, lastName, phone, address,password, createdAt FROM users WHERE id = ?", id).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.Address, &u.Password, &u.CreatedAt)
 	return &u, err
 }
 
 func (s *Storage) GetUserByEmail(email string) (*types.User, error) {
 	var u types.User
-	err := s.db.QueryRow("SELECT id, email, firstName, lastName, createdAt, password FROM users WHERE email = ?", email).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt, &u.Password)
+	err := s.db.QueryRow("SELECT id, email, firstName, lastName, phone, address,password, createdAt FROM users WHERE email = ?", email).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.Address, &u.Password, &u.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")
@@ -130,6 +138,67 @@ func (s *Storage) GetUserByEmail(email string) (*types.User, error) {
 	return &u, nil
 }
 
+func (s *Storage) UpdateUserProfile(userID int64, updateRequest *types.UserUpdateRequest) (*types.User, error) {
+	query := "UPDATE users SET"
+	args := []interface{}{}
+	argCount := 1
+
+	if updateRequest.FirstName != nil {
+		query += " firstName = ?"
+		args = append(args, *updateRequest.FirstName)
+		argCount++
+	}
+	if updateRequest.LastName != nil {
+		if argCount > 1 {
+			query += ","
+		}
+		query += " lastName = ?"
+		args = append(args, *updateRequest.LastName)
+		argCount++
+	}
+	if updateRequest.Email != nil {
+		if argCount > 1 {
+			query += ","
+		}
+		query += " email = ?"
+		args = append(args, *updateRequest.Email)
+		argCount++
+	}
+	// Add more fields similarly
+	if updateRequest.Phone != nil {
+		if argCount > 1 {
+			query += ","
+		}
+		query += " phone = ?"
+		args = append(args, *updateRequest.Phone)
+		argCount++
+	}
+	if updateRequest.Address != nil {
+		if argCount > 1 {
+			query += ","
+		}
+		query += " address = ?"
+		args = append(args, *updateRequest.Address)
+		argCount++
+	}
+
+	query += " WHERE id = ?"
+	args = append(args, userID)
+
+	_, err := s.db.Exec(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch the updated user details
+	var updatedUser types.User
+	err = s.db.QueryRow("SELECT id, email, firstName, lastName, phone, address, createdAt FROM users WHERE id = ?", userID).Scan(&updatedUser.ID, &updatedUser.Email, &updatedUser.FirstName, &updatedUser.LastName, &updatedUser.Phone, &updatedUser.Address, &updatedUser.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &updatedUser, nil
+}
 func (s *Storage) CreateProject(p *types.Project) error {
 	result, err := s.db.Exec("INSERT INTO projects (name) VALUES (?)", p.Name)
 	if err != nil {
@@ -198,4 +267,79 @@ func (s *Storage) GetProjectByName(name string) (bool, error) {
 		return false, err // Other errors (e.g., query issues)
 	}
 	return true, nil // Project found
+}
+
+func (s *Storage) RequestPasswordReset(email, resetToken string) error {
+	// Check if the email exists
+	var userID int64
+	err := s.db.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("email not found")
+		}
+		return err
+	}
+
+	// Save the reset token and expiration to the database
+	expiration := time.Now().Add(1 * time.Hour) // Token valid for 1 hour
+	_, err = s.db.Exec(`
+		INSERT INTO password_reset_tokens (user_id, token, expiration)
+		VALUES (?, ?, ?)
+		ON DUPLICATE KEY UPDATE token = VALUES(token), expiration = VALUES(expiration)
+	`, userID, resetToken, expiration)
+
+	return err
+}
+
+func (s *Storage) UpdatePassword(userID int64, newPassword string) error {
+	_, err := s.db.Exec(`
+		UPDATE users
+		SET password = ?
+		WHERE id = ?
+	`, newPassword, userID)
+	return err
+}
+
+func (s *Storage) ValidateResetToken(token string) (int64, error) {
+	var userID int64
+	var expiration time.Time
+
+	err := s.db.QueryRow(`
+		SELECT user_id, expiration
+		FROM password_reset_tokens
+		WHERE token = ?
+	`, token).Scan(&userID, &expiration)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("invalid token")
+		}
+		return 0, err
+	}
+
+	if time.Now().After(expiration) {
+		return 0, fmt.Errorf("token expired")
+	}
+
+	return userID, nil
+}
+
+func (s *Storage) InvalidateResetToken(token string) error {
+	_, err := s.db.Exec("DELETE FROM password_reset_tokens WHERE token = ?", token)
+	return err
+}
+
+func (s *Storage) BlacklistToken(tokenString string) error {
+	_, err := s.db.Exec("INSERT INTO token_blacklist (token) VALUES (?)", tokenString)
+	return err
+}
+
+func (s *Storage) IsTokenBlacklisted(token string) (bool, error) {
+	var count int
+	query := "SELECT COUNT(*) FROM blacklisted_tokens WHERE token = ?"
+	err := s.db.QueryRow(query, token).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

@@ -22,6 +22,8 @@ type User struct {
 	LastName  string    `JSON:"lastName"`
 	Password  string    `JSON:"password"`
 	CreatedAt time.Time `JSON:"createdAt"`
+	Phone     *string `JSON:"phone,omitempty"`
+    Address   *string `JSON:"address,omitempty"`
 }
 
 type LoginRequest struct {
@@ -58,4 +60,24 @@ type UserResponse struct {
 	LastName  string    `json:"LastName"`
 	Email     string    `json:"Email"`
 	CreatedAt time.Time `json:"CreatedAt"`
+	Phone     *string `json:"phone,omitempty"`
+    Address   *string `json:"address,omitempty"`
+}
+
+type UserUpdateRequest struct {
+    FirstName *string `json:"firstName,omitempty"`
+    LastName  *string `json:"lastName,omitempty"`
+    Email     *string `json:"email,omitempty"`
+   
+    Phone     *string `json:"phone,omitempty"`
+    Address   *string `json:"address,omitempty"`
+}
+
+type PasswordResetRequest struct {
+	Email string `json:"email"`
+}
+
+type PasswordResetPayload struct {
+	ResetToken string `json:"resetToken"`
+	NewPassword string `json:"newPassword"`
 }
