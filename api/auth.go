@@ -21,12 +21,12 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store Store) http.HandlerFunc {
 			return
 		}
 
-		isBlacklisted, err := store.IsTokenBlacklisted(tokenString)
-		if err != nil || isBlacklisted {
-			log.Printf("token is blacklisted")
-			errorHandler(w, "permission denied")
-			return
-		}
+		// isBlacklisted, err := store.IsTokenBlacklisted(tokenString)
+		// if err != nil || isBlacklisted {
+		// 	log.Printf("token is blacklisted")
+		// 	errorHandler(w, "permission denied")
+		// 	return
+		// }
 
 		token, err := validateJWT(tokenString)
 		if err != nil {

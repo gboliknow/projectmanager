@@ -171,7 +171,7 @@ func (s *MySQLStorage) columnExists(tableName, columnName string) (bool, error) 
 
 func (s *MySQLStorage) createTokenBlacklistTable() error {
 	_, err := s.db.Exec(`
-	CREATE TABLE token_blacklist (
+	CREATE TABLE  IF NOT EXISTS token_blacklist (
 		token VARCHAR(255) NOT NULL,
 		createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		PRIMARY KEY (token)
