@@ -28,6 +28,6 @@ func main() {
 		log.Fatal(err)
 	}
 	store := api.NewStore(db)
-	api := api.NewAPIServer(":3306", store)
+	api := api.NewAPIServer(":8080", store)
 	api.Serve()
 }
